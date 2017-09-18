@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>json字段生成器</title>
+</head>
+<style type="text/css">
+	html,body{
+		margin: 0;
+		padding: 0;list-style;
+		font-size: 12px;
+	}
+	#json_container{
+		
+	}
+	.json_structure{
+		list-style-type: none; 
+		display: flex;
+		flex-wrap: wrap;
+	}
+	.json_dataname{
+		cursor: pointer;
+		display:flex;
+		flex-wrap: wrap;
+		width: 600px;
+        color: rgb(84,84,84);
+	}
+    .name{
+        margin-right: 40px;
+    }
+	.plus{
+		background: url('details_open.png') no-repeat;
+		display: inline-block;
+		width: 60px;
+		height: 20px;
+	}
+    .value+.plus:after{
+        content: "键值";
+        margin-left: 20px;
+    }
+	.cancel{
+		background: url('details_close.png') no-repeat;
+		display: inline-block;
+		width: 60px;
+		height: 20px;
+	}
+    .cancel:after{
+        content: "键名：";
+        margin-left: 20px;
+    }    
+	.dataname{
+		border: none;
+	}
+</style>
+<body>
+ 	<div>
+ 		<select id="jsonname">
+ 			<option>现有json结构包</option>
+ 		</select>
+ 		<input type="text" id="json_dataname">
+ 		<button id="add_jsondata">添加新的json结构图</button>
+ 	</div>
+	<div id="json_container">
+		
+	</div>
+</body>
+<script type="text/javascript">
+	function getElementByClassName(classnames){   
+		 var objArray= new Array();//定义返回对象数组  
+    	var tags=document.getElementsByTagName("*");//获取页面所有元素  
+    	var index = 0;  
+    	for(var i in tags){  
+        	if(tags[i].nodeType==1){  
+            	if(tags[i].getAttribute("class") == classnames){ //如果某元素的class值为所需要  
+                	objArray[index]=tags[i];  
+                	index++;  
+          		}   
+      		}   
+  		}   
+   		return objArray;  
+    }
+    var jsonfields_generation=function(container,json_dataname){
+    	this.init(container,json_dataname);
+    }
+    jsonfields_generation.prototype={
+    	init:function(container,json_dataname){
+            if(document.getElementById(json_dataname)!==null){
+                alert("json包名已存在");
+                return;
+            }//暂时以DOM ID作主键 分辨不同的json结构包
+            this.json_structure_init(container,json_dataname); //json结构参数和DOM结构初始化
+    		var othis=this;
+    		
+            this.li_root_inner="<li class='json_dataname' data-ul='0' data-num='3' data-type='root'><span class='cancel'></span><input class='dataname name' type='text' disabled='disabled' value='"+json_dataname+"' />  <span class='plus'></span></li>";
+            this.li_default_inner="<li class='json_dataname' data-ul='0' data-num='4'><span class='cancel'></span><input class='dataname name' type='text' disabled='disabled' value='"+json_dataname+"' /> <input class='dataname value' type='text' disabled='disabled' value='"+json_dataname+"' /> <span class='plus'></span></li>";
+            this.ul=new Array();	    		
+    		this.li_click=function(event){
+    			event.stopPropagation();
+    			event=event?event:window.event;
+    			var obj= event.srcElement ? event.srcElement : event.target;
+                var li_parent=obj.parentNode;
+                var ul_parent=li_parent.parentNode;
+                switch(obj.className.split(" ")[0]){
+                    case "dataname":
+                    obj.removeAttribute("disabled");
+                    obj.focus();
+                    break;
+                    case "cancel":
+                    var r=confirm("确定删除么");
+                    if(r){
+                        if(ul_parent.parentNode.getAttribute("data-num")=="4"){
+                            var input =othis.input();
+                            input.addEventListener("click",othis.li_click);
+                            input.addEventListener("blur",othis.li_blur);
+                            ul_parent.parentNode.insertBefore(input,ul_parent.parentNode.childNodes[ul_parent.parentNode.childNodes.length-2]);
+                        }                  
+                        if(li_parent.getAttribute("data-type")=="root"){
+                            ul_parent.parentNode.parentNode.removeChild(ul_parent.parentNode);
+                        }                        
+                        else{
+                            ul_parent.parentNode.removeChild(ul_parent);
+                        }
+                             
+                    }
+                    break;
+                    case "plus":
+                    var ul=document.createElement("ul");
+                    ul.innerHTML=othis.li_default_inner;
+                    li_parent.appendChild(ul);
+                    li_parent.setAttribute("data-num",(parseInt(li_parent.getAttribute("data-num"))+1).toString());
+                    for(var i=0;i<li_parent.childNodes.length;i++){
+                        if(li_parent.childNodes[i].className=="dataname value")
+                        {
+                            li_parent.removeChild(li_parent.childNodes[i]);
+                            li_parent.setAttribute("data-num",(parseInt(li_parent.getAttribute("data-num"))-1).toString());
+                        }
+                    }                     
+                    othis.li_all_event(getElementByClassName("json_dataname"));
+                    break;                        
+                }  			
+    		}//结构树字段增减 名字修改事件  click
+    		this.li_blur=function(event){
+    			event.stopPropagation();
+    			event=event?event:window.event;
+    			var dataname=getElementByClassName("dataname name");
+                for(var i=0;i<dataname.length;i++){
+                    dataname[i].setAttribute("disabled","disabled");
+                }    			
+    		}//字段名字修改 mouseover
+    		this.li_all_event=function(obj){
+    			if(obj instanceof Array){
+    				for(var i=0;i<obj.length;i++){
+    					obj[i].addEventListener("click",othis.li_click);
+    					obj[i].addEventListener("blur",othis.li_blur);
+    				}
+    				return;
+    			}
+    			obj.addEventListener("click",othis.li_click);
+    			obj.addEventListener("blur",othis.li_blur);
+
+    		}//点击事件刷新
+            this.getJson_click=function(event){
+                event.stopPropagation();
+                event=event?event:window.event;
+                var obj= event.srcElement ? event.srcElement : event.target;
+                var ul_parent=obj.parentNode;
+                var json_txt=null;
+                var root_child=ul_parent.childNodes[0];
+                othis.li_all_through(root_child,json_txt,"root","\t");
+            }
+            this.li_all_through=function(obj,json_txt,root,num){
+                // json_txt+=
+                // var txt=json_txt
+                var tab=num;
+                if(root=="root"){
+                        var root_child=obj.childNodes
+                        json_txt="var "+root_child[1].value+"={\n";
+                    }
+                else{
+                    var root_child=obj.childNodes[0].childNodes;
+                }
+                if(root=="root"&&root_child.length>4){
+                    tab+="\t";   
+                    for(var i=4;i<root_child.length;i++){                       
+                        var test=root_child[i];                        
+                        json_txt+=othis.li_all_through(test,"","child",tab);
+                        // if(i<root_child.length-1){
+                        //     json_txt+=",";
+                        // }
+                    }
+                    // }
+                    // else{
+                    //     // txt+="\n\""+root_child[1].value+"\" : \""+root_child[2].value+
+                    // }                                       
+                }
+                else
+                {
+                    if(root!="root"&&(root_child[3].className!="dataname value")){
+                        json_txt+=tab+"\""+root_child[1].value+"\":{\n";
+                        tab+="\t";
+                        for(var i=5;i<root_child.length;i++){                            
+                            var test=root_child[i];                            
+                            json_txt+=othis.li_all_through(test,"","child",tab);                           
+                            if(i<root_child.length-1){
+                                json_txt+=tab+",";
+                            }
+                        }
+                        json_txt+=tab+"}\n";                        
+                    }
+                    else if(root=="child"){
+                        json_txt+=tab+"\""+root_child[1].value+"\":\""+root_child[3].value+"\",\n";
+                    }
+
+                }
+
+                if(root=="root"){
+                    json_txt=json_txt.substr(0,json_txt.length-2);
+                    json_txt+="\n";
+                    json_txt+=tab+"}";
+                    console.log(json_txt);
+                }               
+                return json_txt;
+            }
+    		// var json_structure="<ul class='json_structure' data-num='1'><li class='json_dataname'><span class='cancel' data-type='top'></span><input class='dataname' type='text' disabled='disabled' value='"+json_dataname+"' /> <span class='plus'></span></li></ul>";
+    		var json_structure=document.createElement("ul");
+    		//json_structure.setAttribute("data-num",this.json_structure_ul_num++);
+    		json_structure.innerHTML=this.li_root_inner;
+            this.getJsonButton=document.createElement("button");
+            this.getJsonButton.className="getJson";
+            this.getJsonButton.innerHTML="生成结构包并复制在剪切板";
+            json_structure.appendChild(this.getJsonButton);
+    		this.json_dataname.appendChild(json_structure); 
+
+    		this.ul.pop(this.json_structure_ul_num);
+    		this.li_all_event(getElementByClassName("json_dataname"));
+            this.json_dataname.lastChild.addEventListener("click",this.getJson_click);
+    	},
+    	json_structure_init:function(container,json_dataname){
+    		this.json_structure_ul=new Array();
+    		this.json_structure_ul_num=1;
+            this.json_structure_li_num=1;
+    		this.container=document.getElementById(container);
+            var json_dataname_div=null;
+            if(document.getElementById(json_dataname)!=null){
+                this.json_dataname=document.getElementById(json_dataname);
+            }
+            else{
+                json_dataname_div=document.createElement("div");
+                json_dataname_div.setAttribute("id",json_dataname);
+                this.container.appendChild(json_dataname_div);
+                this.json_dataname=document.getElementById(json_dataname);
+
+            }    		
+    	},
+        input:function(){
+            var input =document.createElement("input");
+            input.setAttribute("class","dataname value");
+            input.setAttribute("type","text");
+            input.setAttribute("disabled","disabled");
+            input.setAttribute("value","");
+            return input;
+        }
+    }
+    window.onload=function(){
+    	var add_jsondata=document.getElementById("add_jsondata");
+    	add_jsondata.addEventListener("click",generation)
+    }
+    function generation(){
+    	var value=document.getElementById("json_dataname").value;
+    	if(value!=""&&value!=null){
+    		new jsonfields_generation("json_container",value);
+    	}
+    }
+</script>
+</html>
